@@ -1,131 +1,146 @@
-# Algoritmo Factorial con Recursión de Cola
+# Informe de proceso
 
-## Definición del Algoritmo
+En este taller modelé un robot que se mueve en una cuadrícula. Su estado
+tiene dos coordenadas y la dirección hacia la que mira. Las órdenes pueden
+ser simples (`Avanzar` y `Girar`) o contener otras órdenes (`Repetir` y
+`Secuencia`), por eso varias funciones usan recursión.
 
-```Scala
-def factorial(n: Int): BigInt = {
-  @annotation.tailrec
-  def loop(x: Int, acumulador: BigInt): BigInt = {
-    if (x <= 1) acumulador
-    else loop(x - 1, acumulador * x)
-  }
-  loop(n, 1)
-}
+## 1. Cambiar la dirección
+
+En `girar` reviso la dirección y el sentido al mismo tiempo con un `match`
+sobre la pareja `(d, s)`. Si el sentido es derecha, sigo Norte, Este, Sur,
+Oeste y vuelvo a Norte. Para izquierda recorro el mismo ciclo al revés.
+
+Por ejemplo, si el robot mira al Oeste y gira a la derecha, queda mirando al
+Norte. Si mira al Sur y gira a la izquierda, queda mirando al Este. En ambos
+casos la posición se mantiene.
+
+Con un estado concreto, la primera operación queda así:
+
+| Operación | Estado |
+|---|---|
+| Inicio | `(3,-2,Oeste)` |
+| Girar a la derecha | `(3,-2,Norte)` |
+| Girar a la izquierda | `(3,-2,Oeste)` |
+
+La segunda operación deshace la primera.
+
+## 2. Ejecutar órdenes
+
+En `ejecutar` hay un caso para cada tipo de orden:
+
+- Para `Avanzar(n)`, cambio una sola coordenada. Si mira al Norte sumo `n` a
+  `y`; si mira al Este sumo `n` a `x`. Al mirar al Sur u Oeste resto `n`.
+  Así, un `n` negativo hace que el robot retroceda.
+- Para `Girar(sentido)`, uso `girar` y copio el estado con la nueva
+  dirección. Las coordenadas no cambian.
+- Para `Repetir`, una función interna aplica la orden una vez por llamada y
+  se detiene cuando ya no quedan repeticiones positivas.
+- Para `Secuencia`, `foldLeft` pasa el estado que dejó una orden a la
+  siguiente. Con una lista vacía, devuelve el estado con el que empezó.
+
+La siguiente traza muestra una secuencia repetida cuatro veces. El robot
+empieza en `(0,0)` mirando al Norte:
+
+| Vuelta | Estado inicial | Después de avanzar | Después del giro |
+|---|---|---|---|
+| 1 | `(0,0,Norte)` | `(0,1,Norte)` | `(0,1,Este)` |
+| 2 | `(0,1,Este)` | `(1,1,Este)` | `(1,1,Sur)` |
+| 3 | `(1,1,Sur)` | `(1,0,Sur)` | `(1,0,Oeste)` |
+| 4 | `(1,0,Oeste)` | `(0,0,Oeste)` | `(0,0,Norte)` |
+
+La orden es
+`Repetir(4, Secuencia(List(Avanzar(1), Girar(Derecha))))`. Como se ve en la
+tabla, termina en el origen y mirando al Norte.
+
+## 3. Contar órdenes y medir profundidad
+
+`cuantasBasicas` cuenta los `Avanzar` y `Girar` que se ejecutarían. En una
+secuencia sumo lo que aporta cada elemento; en una repetición multiplico el
+conteo de la orden interior por las veces que se repite. Si las veces son
+cero o negativas, no se ejecuta ninguna orden interior.
+
+Por ejemplo,
+`Repetir(3, Secuencia(List(Avanzar(1), Girar(Derecha))))` contiene seis
+órdenes básicas: dos en cada vuelta.
+
+`profundidad` mide cuántos niveles hay desde la orden hasta la orden más
+interna. Una orden básica vale uno. Para `Repetir` agrego un nivel a la
+profundidad interior; para `Secuencia`, tomo la profundidad máxima de sus
+elementos y agrego uno. En una secuencia vacía no hay elementos, así que el
+máximo se toma como cero y la profundidad queda en uno.
+
+Para ver ambas medidas junto con el recorrido, tomo
+`Repetir(2, Secuencia(List(Avanzar(1), Girar(Derecha))))`. Tiene cuatro
+órdenes básicas y profundidad tres. Al ejecutarla desde el origen:
+
+| Acción | Posición y dirección |
+|---|---|
+| Inicio | `(0,0,Norte)` |
+| Primera vuelta: avanzar | `(0,1,Norte)` |
+| Primera vuelta: girar | `(0,1,Este)` |
+| Segunda vuelta: avanzar | `(1,1,Este)` |
+| Segunda vuelta: girar | `(1,1,Sur)` |
+
+## 4. Combinar y reutilizar órdenes
+
+`componer(a,b)` arma una secuencia con `a` primero y `b` después. Por
+ejemplo, empezando en `(2,2,Norte)`, componer `Avanzar(3)` con
+`Girar(Derecha)` deja al robot en `(2,5,Este)`: primero sube tres casillas y
+luego cambia de dirección.
+
+`rutina(pasos)(giro)(veces)` devuelve una orden que repite un avance seguido
+de un giro. Por ejemplo, `rutina(2)(Derecha)(2)` ejecuta dos veces
+`Avanzar(2)` y luego `Girar(Derecha)`. Desde el estado inicial, su traza es:
+
+| Acción | Estado |
+|---|---|
+| Inicio | `(0,0,Norte)` |
+| Avanzar 2 | `(0,2,Norte)` |
+| Girar a la derecha | `(0,2,Este)` |
+| Avanzar 2 | `(2,2,Este)` |
+| Girar a la derecha | `(2,2,Sur)` |
+
+`aplicarA` hace lo mismo con varios estados: ejecuta la orden para cada uno y
+devuelve los resultados en el mismo orden. Por ejemplo, al aplicar
+`Avanzar(2)` a `(0,0,Norte)` y `(5,5,Sur)`, los resultados son
+`(0,2,Norte)` y `(5,3,Sur)`.
+
+`transformar` recorre una orden y llama a la función recibida para cada caso
+básico. Si encuentra una repetición o una secuencia, vuelve a recorrer lo que
+contienen y conserva la estructura. Por eso se puede, por ejemplo, duplicar
+los pasos de cada avance sin cambiar los giros.
+
+Si se duplican los avances de la rutina del ejemplo anterior, cada
+`Avanzar(2)` se convierte en `Avanzar(4)`. El recorrido queda así:
+`(0,0,Norte)`, `(0,4,Norte)`, `(0,4,Este)`, `(4,4,Este)` y `(4,4,Sur)`.
+La dirección gira igual que antes, pero cada avance cubre el doble de
+casillas.
+
+## 5. Simplificar
+
+En `simplificar` primero trabajo sobre las órdenes internas. Después aplico
+las reglas que reducen la estructura: los avances de cero y las repeticiones
+no positivas se convierten en `Secuencia(Nil)`; una repetición de una vez se
+reemplaza por su orden; y las secuencias eliminan órdenes sin efecto. También
+junto avances que están uno al lado del otro. Si su suma es cero, ese avance
+se elimina. Al final, una secuencia con un único elemento se reduce a ese
+elemento.
+
+Este ejemplo muestra cómo se simplifican varias partes de la orden:
+
+```text
+Secuencia(List(Avanzar(0), Repetir(1, Secuencia(List(Avanzar(2), Avanzar(3)))),
+              Avanzar(-5), Girar(Derecha)))
 ```
 
-* La función `factorial` calcula el factorial de un número `n` utilizando **recursión de cola**.
-* La función interna `loop` es la que hace la recursión:
+Al recorrer la orden, primero se juntan los avances interiores `2` y `3`, y
+se elimina la repetición de una vez. En la secuencia exterior, `Avanzar(0)`
+no aporta movimiento; además, `Avanzar(5)` y `Avanzar(-5)` se cancelan. Por
+eso, el resultado final de simplificar toda la orden es
+`Girar(Derecha)`.
 
-  * Recibe dos parámetros:
-
-    * `x`: el valor actual decreciente hasta llegar a 1.
-    * `acumulador`: donde se guarda el resultado parcial en cada paso.
-* El decorador `@annotation.tailrec` obliga a que la función sea optimizada como recursión de cola, es decir, **no se acumulan llamados en la pila**.
-
-## Explicación paso a paso
-
-### Caso base
-
-```Scala
-if (x <= 1) acumulador
-```
-
-Cuando `x` llega a `1`, la función retorna directamente el valor acumulado, evitando más llamadas.
-
-### Caso recursivo
-
-```Scala
-loop(x - 1, acumulador * x)
-```
-
-En cada llamada:
-
-* Se reduce el valor de `x` en 1.
-* Se multiplica el acumulador por `x` y se pasa a la siguiente iteración.
-* Como es recursión de cola, la llamada recursiva es la **última instrucción** en ejecutarse, lo que permite a Scala optimizar la pila.
-
----
-
-## Llamados de pila en recursión de cola
-
-Ejemplo:
-
-```Scala
-factorial(5)
-```
-
-### Paso 1: Llamada inicial
-
-```Scala
-loop(5, 1)
-```
-
-### Paso 2: Primera iteración
-
-```Scala
-loop(4, 5)   // acumulador = 1 * 5
-```
-
-### Paso 3: Segunda iteración
-
-```Scala
-loop(3, 20)  // acumulador = 5 * 4
-```
-
-### Paso 4: Tercera iteración
-
-```Scala
-loop(2, 60)  // acumulador = 20 * 3
-```
-
-### Paso 5: Cuarta iteración
-
-```Scala
-loop(1, 120) // acumulador = 60 * 2
-```
-
-### Paso 6: Caso base
-
-```Scala
-return 120
-```
-
----
-
-## Diferencia con recursión normal
-
-* En **recursión normal** cada llamada queda en la pila esperando a que termine la siguiente, lo que puede causar desbordamiento si `n` es muy grande.
-* En **recursión de cola**, el compilador transforma el proceso en un **bucle optimizado**, por lo que no se guarda cada llamada en la pila y el algoritmo puede ejecutarse para valores muy grandes sin problema.
-
----
-
-## Ejemplo de uso
-
-```Scala
-val resultado = factorial(5)
-println(resultado)  // 120
-```
-
-El resultado de `factorial(5)` es `120`.
-
-
-## Diagrama de llamados de pila con recursión de cola
-
-```mermaid
-sequenceDiagram
-    participant Main as factorial(5)
-    participant L1 as loop(5, 1)
-    participant L2 as loop(4, 5)
-    participant L3 as loop(3, 20)
-    participant L4 as loop(2, 60)
-    participant L5 as loop(1, 120)
-
-    Main->>L1: llamada inicial
-    L1->>L2: tail call con (4, 5)
-    L2->>L3: tail call con (3, 20)
-    L3->>L4: tail call con (2, 60)
-    L4->>L5: tail call con (1, 120)
-    L5-->>Main: return 120
-```
-
-
+También comparé la ejecución de las dos órdenes. Desde `(0,0,Norte)`, la
+orden original queda en `(0,5,Norte)` después de los avances `2` y `3`,
+vuelve a `(0,0,Norte)` con `Avanzar(-5)` y termina en `(0,0,Este)` al
+girar. La orden simplificada `Girar(Derecha)` termina en el mismo estado.

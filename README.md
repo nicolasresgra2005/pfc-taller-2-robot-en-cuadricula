@@ -10,16 +10,13 @@ archivo dice cómo está armado el proyecto y cómo se entrega.
 
 ## Integrantes
 
-Llene esta tabla con el nombre completo y el código de cada integrante. Es
-parte de la entrega: si falta alguno, la entrega se sanciona con el 20 % de
-la nota.
+La tabla debe incluir el nombre completo y el código de cada integrante.
+Es parte de la entrega: si falta alguien, se aplica la sanción indicada en el
+enunciado.
 
 | Nombre completo | Código |
 |---|---|
-| | |
-| | |
-| | |
-| | |
+| Nicolas Restrepo Grajales | 2380471-2724 |
 
 ## Cómo está organizado el proyecto
 
@@ -31,19 +28,15 @@ app/src/main/scala/taller/
 
 app/src/test/scala/taller/
     RobotCuadriculaTest.scala   las 40 pruebas dadas, que no se modifican
+    RobotCuadriculaCasosPropiosTest.scala
+                               pruebas propias: cinco por cada punto
 
 docs/                         los informes, en Markdown
 ```
 
-Su código va en `RobotCuadricula.scala`. Las 40 pruebas que vienen escritas
-no se modifican: son el contrato con que se califica.
-
-La rúbrica pide además **cinco casos de prueba propios por cada punto**,
-distintos de los ejemplos del enunciado y de los que trae el material. Esos
-van donde le resulte más cómodo: al final de `RobotCuadriculaTest.scala`,
-debajo de las que ya están, o en un archivo nuevo dentro de
-`app/src/test/scala/taller/`. Las dos formas valen; lo que no se toca es lo
-que ya estaba escrito.
+La solución de los cinco puntos está en `RobotCuadricula.scala`. Las pruebas
+originales están en `RobotCuadriculaTest.scala` y se mantienen aparte de las
+25 pruebas propias de `RobotCuadriculaCasosPropiosTest.scala`.
 
 Los informes de proceso y de corrección que pide el enunciado van en `docs/`,
 en Markdown, con la notación matemática en LaTeX y los diagramas en
@@ -62,16 +55,12 @@ versión de Java que necesita. No hay que instalar nada a mano. Al terminar,
 `./gradlew test` deja un informe navegable en
 `app/build/reports/tests/test/index.html`.
 
-## El punto de partida
+## Modelo y solución
 
-Al clonar, las 40 pruebas están en rojo, porque las nueve funciones dicen
-`???`. Su trabajo es reemplazar cada `???` y ver las pruebas ponerse en
-verde.
-
-`Modelo.scala` trae los tipos ya escritos: `Direccion` con sus cuatro puntos
+`Modelo.scala` define los tipos del taller: `Direccion` con sus cuatro puntos
 cardinales, `Sentido`, `Orden` con sus cuatro alternativas y `Estado`. No se
-modifican. El valor `inicial`, el robot en el origen mirando al norte,
-también viene dado.
+modifica. `RobotCuadricula.scala` implementa los cinco puntos sobre ese
+modelo.
 
 El tipo `Orden` es recursivo: `Repetir` y `Secuencia` contienen otras
 órdenes. Toda función que lo recorra lo es también, y se escribe con `match`
